@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 import pandas as pd
 
 # Load the trained model
-model = load_model('/Users/m.irfansyah/Downloads/heart_failure_cnn_model.h5')  # Simpan model ke file terlebih dahulu setelah training
+model = load_model('heart_failure_cnn_model.h5')  # Simpan model ke file terlebih dahulu setelah training
 scaler = StandardScaler()
 
 # Define the Streamlit app
