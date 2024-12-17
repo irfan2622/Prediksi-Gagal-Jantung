@@ -1,48 +1,54 @@
 import streamlit as st
 import numpy as np
-from tensorflow.keras.models import load_model
-from sklearn.preprocessing import StandardScaler
-import pandas as pd
+import tensorflow as tf
+from PIL import Image
+import cv2
 
-# Load the trained model
-model = load_model('heart_failure_cnn_model.h5')  # Simpan model ke file terlebih dahulu setelah training
-scaler = StandardScaler()
+# Load model
+model = tf.keras.models.load_model('Model1.h5')
 
-# Define the Streamlit app
-st.title("Heart Failure Prediction")
+# Class names sesuai urutan pada training
+class_names = ['no', 'yes']
 
-# Input form
-st.subheader("Masukkan Data Pasien:")
-age = st.number_input("Age", min_value=0, step=1)
-anaemia = st.selectbox("Anaemia (1: Yes, 0: No)", [0, 1])
-creatinine_phosphokinase = st.number_input("Creatinine Phosphokinase (mcg/L)", min_value=0)
-diabetes = st.selectbox("Diabetes (1: Yes, 0: No)", [0, 1])
-ejection_fraction = st.number_input("Ejection Fraction (%)", min_value=0, max_value=100, step=1)
-high_blood_pressure = st.selectbox("High Blood Pressure (1: Yes, 0: No)", [0, 1])
-platelets = st.number_input("Platelets (kiloplatelets/mL)", min_value=0.0, step=0.1)
-serum_creatinine = st.number_input("Serum Creatinine (mg/dL)", min_value=0.0, step=0.1)
-serum_sodium = st.number_input("Serum Sodium (mEq/L)", min_value=0, step=1)
-sex = st.selectbox("Sex (1: Male, 0: Female)", [0, 1])
-smoking = st.selectbox("Smoking (1: Yes, 0: No)", [0, 1])
-time = st.number_input("Follow-up Period (days)", min_value=0, step=1)
-
-# Predict button
-if st.button("Predict"):
-    # Preprocess the input
-    input_data = np.array([[age, anaemia, creatinine_phosphokinase, diabetes, ejection_fraction,
-                            high_blood_pressure, platelets, serum_creatinine, serum_sodium,
-                            sex, smoking, time]])
+# Preprocessing function
+def preprocess_image(image):
+    # Pastikan gambar memiliki 3 channel
+    if len(image.shape) == 2:  # Jika gambar grayscale
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+    elif image.shape[2] == 1:  # Jika gambar grayscale dengan channel eksplisit
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
     
-    # Standardize the data
-    input_data_scaled = scaler.fit_transform(input_data)
-    input_data_reshaped = np.expand_dims(input_data_scaled, axis=-1)
-    
-    # Make prediction
-    prediction_probs = model.predict(input_data_reshaped)
-    prediction = np.argmax(prediction_probs)
-    confidence = prediction_probs[0][prediction] * 100
+    # Ubah ukuran gambar ke 224x224 sesuai dengan input model
+    image = cv2.resize(image, (224, 224))
+    image = np.array(image) / 255.0  # Normalisasi pixel (0-1)
+    image = np.expand_dims(image, axis=0)  # Tambahkan dimensi batch
+    return image
 
-    # Display result
-    result = "DEATH_EVENT: Yes" if prediction == 1 else "DEATH_EVENT: No"
-    st.subheader("Hasil Prediksi:")
-    st.write(f"{result} dengan tingkat keyakinan {confidence:.2f}%")
+# Streamlit app
+def main():
+    st.title("Brain Tumor Detection")
+    st.write("Unggah gambar MRI untuk mendeteksi tumor otak.")
+
+    uploaded_file = st.file_uploader("Unggah gambar MRI", type=["jpg", "jpeg", "png"])
+
+    if uploaded_file is not None:
+        # Baca gambar yang diunggah
+        image = Image.open(uploaded_file).convert("RGB")  # Pastikan gambar selalu RGB
+        st.image(image, caption="Gambar yang diunggah", use_column_width=True)
+        
+        # Preprocessing gambar
+        image_array = np.array(image)
+        preprocessed_image = preprocess_image(image_array)
+
+        # Prediksi menggunakan model
+        prediction = model.predict(preprocessed_image)
+        predicted_class = class_names[np.argmax(prediction)]
+        confidence = np.max(prediction) * 100
+
+        # Tampilkan hasil prediksi
+        st.subheader("Hasil Prediksi")
+        st.write(f"**Kelas:** {predicted_class}")
+        st.write(f"**Kepercayaan:** {confidence:.2f}%")
+
+if __name__ == "__main__":
+    main()
