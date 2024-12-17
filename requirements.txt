@@ -1,5 +1,5 @@
 streamlit
 numpy
 tensorflow
-pandas
-scikit-learn
+PIL
+opencv-python
